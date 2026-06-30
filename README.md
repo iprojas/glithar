@@ -15,7 +15,7 @@ A clean, minimal blog built with [EmDash](https://github.com/emdash-cms/emdash) 
 - RSS feed
 - SEO metadata and JSON-LD
 - Dark/light mode
-- Forms plugin and webhook notifier
+- Forms plugin
 
 ## Pages
 
@@ -47,15 +47,15 @@ A clean, minimal blog built with [EmDash](https://github.com/emdash-cms/emdash) 
 ## Local Development
 
 ```bash
-pnpm install
-pnpm bootstrap
-pnpm dev
+bun install
+bunx emdash dev
 ```
 
 ## Deploying
 
 ```bash
-pnpm deploy
+bun run build
+bun run deploy
 ```
 
 Or click the deploy button above to set up the project in your Cloudflare account.

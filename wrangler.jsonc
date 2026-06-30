@@ -7,19 +7,21 @@
 	"d1_databases": [
 		{
 			"binding": "DB",
-			"database_name": "glithar","database_id": "36c749ad-b0e2-4421-adee-7ab2647a4546",
+			"database_name": "glithar",
+			"database_id": "36c749ad-b0e2-4421-adee-7ab2647a4546",
+		},
+	],
+	"kv_namespaces": [
+		{
+			"binding": "SESSION",
+			"id": "ec8ef6ec1654432ba063394d75d20148",
 		},
 	],
 	"r2_buckets": [
 		{
 			"binding": "MEDIA",
-			"bucket_name": "glithar","preview_bucket_name": "glithar",
-		},
-	],
-	// Worker Loader for plugin sandboxing
-	"worker_loaders": [
-		{
-			"binding": "LOADER",
+			"bucket_name": "glithar",
+			"preview_bucket_name": "glithar",
 		},
 	],
 	// Drives scheduled publishing, plugin cron, and maintenance (see src/worker.ts)
