@@ -1,0 +1,177 @@
+---
+interface Props {
+	slug: string;
+	title: string;
+	src: string;
+	poster?: string;
+	socialCaption?: string;
+	visualizer?: string;
+}
+
+const { slug, title, src, poster, socialCaption, visualizer = "urban-spirit" } = Astro.props;
+---
+
+<script is:inline type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
+
+<div class={`viewer-shell visualizer-${visualizer}`} data-slug={slug}>
+	<model-viewer
+		id="model-viewer"
+		src={src}
+		poster={poster}
+		ar
+		ar-modes="scene-viewer quick-look"
+		camera-controls
+		touch-action="pan-y"
+		alt={title}
+		shadow-intensity="2"
+		auto-rotate
+		disable-pan
+		skybox-height="2m"
+		max-camera-orbit="auto 90deg auto"
+	>
+		<div id="error" class="hide">AR is not supported on this device</div>
+		<div class="viewer-loading" slot="poster">Loading</div>
+		<button class="ar-button" slot="ar-button" type="button">View in AR</button>
+	</model-viewer>
+	<div class="viewer-meta">
+		<p>{socialCaption}</p>
+		<div class="viewer-actions">
+			<a href={`/${slug}/qr.png`}>QR PNG</a>
+			<a href={`/${slug}/qr.svg`}>QR SVG</a>
+		</div>
+	</div>
+</div>
+
+<script is:inline>
+	(() => {
+		const viewer = document.querySelector("#model-viewer");
+		const shell = document.querySelector(".viewer-shell");
+		const slug = shell?.getAttribute("data-slug");
+		const key = "glithar.discover.pagesSeen";
+
+		function recordSeen() {
+			if (!slug) return;
+			try {
+				const parsed = JSON.parse(localStorage.getItem(key) || "{}");
+				const slugs = Array.isArray(parsed.slugs) ? parsed.slugs : [];
+				const next = slugs.includes(slug) ? slugs : [...slugs, slug];
+				localStorage.setItem(key, JSON.stringify({
+					slugs: next,
+					count: next.length,
+					updated_at: new Date().toISOString(),
+				}));
+			} catch {
+				localStorage.setItem(key, JSON.stringify({
+					slugs: [slug],
+					count: 1,
+					updated_at: new Date().toISOString(),
+				}));
+			}
+		}
+
+		function track(type) {
+			if (!slug) return;
+			navigator.sendBeacon?.(
+				"/api/ar/analytics/event",
+				new Blob([JSON.stringify({ type, slug, path: location.pathname })], {
+					type: "application/json",
+				}),
+			);
+		}
+
+		recordSeen();
+		track("intervention_view");
+
+		viewer?.addEventListener("ar-status", (event) => {
+			if (event.detail.status === "session-started") {
+				track("ar_launch_attempt");
+			}
+			if (event.detail.status === "failed") {
+				const error = document.querySelector("#error");
+				error.classList.remove("hide");
+				error.addEventListener("transitionend", () => {
+					error.classList.add("hide");
+				}, { once: true });
+			}
+		});
+	})();
+</script>
+
+<style>
+	.viewer-shell {
+		display: grid;
+		gap: var(--spacing-5);
+	}
+	model-viewer {
+		width: 100%;
+		height: min(72vh, 760px);
+		min-height: 420px;
+		background: var(--color-bg-subtle);
+		border-bottom: 1px solid var(--color-border);
+	}
+	#error {
+		position: absolute;
+		left: var(--spacing-4);
+		right: var(--spacing-4);
+		bottom: var(--spacing-4);
+		background: var(--color-text);
+		color: var(--color-bg);
+		padding: var(--spacing-3) var(--spacing-4);
+		border-radius: var(--radius);
+		text-align: center;
+		opacity: 1;
+		transition: opacity 0.3s ease;
+	}
+	#error.hide {
+		opacity: 0;
+		pointer-events: none;
+	}
+	.viewer-loading {
+		display: grid;
+		place-items: center;
+		height: 100%;
+		color: var(--color-muted);
+	}
+	.ar-button,
+	.viewer-actions a {
+		background: var(--color-accent);
+		color: var(--color-on-accent);
+		border: 0;
+		border-radius: var(--radius);
+		padding: var(--spacing-3) var(--spacing-4);
+		font: inherit;
+		font-weight: 700;
+		text-decoration: none;
+	}
+	.ar-button {
+		position: absolute;
+		right: var(--spacing-4);
+		bottom: var(--spacing-4);
+	}
+	.viewer-meta {
+		display: flex;
+		justify-content: space-between;
+		gap: var(--spacing-4);
+		align-items: center;
+		padding: 0 var(--spacing-6) var(--spacing-8);
+	}
+	.viewer-meta p {
+		max-width: 48rem;
+		color: var(--color-text-secondary);
+	}
+	.viewer-actions {
+		display: flex;
+		gap: var(--spacing-2);
+		flex-wrap: wrap;
+	}
+	@media (max-width: 720px) {
+		model-viewer {
+			height: 68vh;
+			min-height: 360px;
+		}
+		.viewer-meta {
+			align-items: flex-start;
+			flex-direction: column;
+		}
+	}
+</style>

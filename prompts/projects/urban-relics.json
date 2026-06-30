@@ -1,0 +1,11 @@
+{
+	"project": "urban-relics",
+	"category": "interventions",
+	"visualizer": "micro-monument",
+	"lora_slug": "glithar-house",
+	"constraints": [
+		"Favor compact geometry suitable for mobile AR.",
+		"Make the object recognizable as a relic, marker, or monument.",
+		"Keep captions short and non-promotional."
+	]
+}

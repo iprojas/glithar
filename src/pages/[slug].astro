@@ -1,0 +1,78 @@
+---
+import Base from "../layouts/Base.astro";
+import ModelViewer from "../components/ModelViewer.astro";
+import { getPublishedIntervention } from "../lib/ar/interventions";
+
+const slug = Astro.params.slug;
+if (!slug) return new Response("Not found", { status: 404 });
+
+const { intervention, cacheHint } = await getPublishedIntervention(
+	slug,
+	Astro.url.origin,
+);
+if (Astro.cache?.enabled) Astro.cache.set(cacheHint);
+if (!intervention) return new Response("Not found", { status: 404 });
+---
+
+<Base
+	title={intervention.title}
+	pageTitle={intervention.title}
+	description={intervention.description}
+	image={intervention.thumbnailUrl || intervention.imageUrl}
+	canonical={intervention.publicUrl}
+	type="article"
+	publishedTime={intervention.post.publishedAt}
+	modifiedTime={intervention.post.updatedAt}
+	content={{ collection: "posts", id: intervention.post.id, slug: intervention.slug }}
+>
+	<article class="intervention-page">
+		<header class="intervention-head">
+			<p class="eyebrow">{intervention.project}</p>
+			<h1>{intervention.title}</h1>
+			<p>{intervention.description}</p>
+		</header>
+		<ModelViewer
+			slug={intervention.slug}
+			title={intervention.title}
+			src={intervention.optimizedModelUrl}
+			poster={intervention.thumbnailUrl}
+			socialCaption={intervention.socialCaption}
+			visualizer={String(intervention.visualizer)}
+		/>
+	</article>
+</Base>
+
+<style>
+	.intervention-page {
+		min-height: 100vh;
+	}
+	.intervention-head {
+		max-width: var(--content-width);
+		margin: 0 auto;
+		padding: var(--spacing-10) var(--spacing-6) var(--spacing-6);
+		text-align: center;
+	}
+	.eyebrow {
+		color: var(--color-accent);
+		font-size: var(--font-size-xs);
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: var(--tracking-wider);
+		margin-bottom: var(--spacing-2);
+	}
+	h1 {
+		font-size: 4.5rem;
+		line-height: 1;
+		letter-spacing: var(--tracking-tight);
+	}
+	.intervention-head p:last-child {
+		margin-top: var(--spacing-4);
+		color: var(--color-text-secondary);
+		font-size: var(--font-size-lg);
+	}
+	@media (max-width: 720px) {
+		h1 {
+			font-size: 2.75rem;
+		}
+	}
+</style>

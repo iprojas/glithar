@@ -130,9 +130,14 @@ const isLoggedIn = !!Astro.locals.user;
 				</div>
 				{
 					isLoggedIn && (
-						<a href="/_emdash/admin" class="nav-admin">
-							Admin
-						</a>
+						<div class="nav-admin-links">
+							<a href="/_glithar/admin" class="nav-admin">
+								AR Studio
+							</a>
+							<a href="/_emdash/admin" class="nav-admin">
+								Admin
+							</a>
+						</div>
 					)
 				}
 			</nav>
@@ -639,6 +644,12 @@ const isLoggedIn = !!Astro.locals.user;
 				color: var(--color-accent);
 			}
 
+			.nav-admin-links {
+				display: flex;
+				align-items: center;
+				gap: var(--spacing-3);
+			}
+
 			.nav-admin {
 				font-size: var(--font-size-sm);
 				color: var(--color-text-secondary);
@@ -973,12 +984,15 @@ const isLoggedIn = !!Astro.locals.user;
 					justify-content: flex-start;
 				}
 
-				.nav-admin {
+				.nav-admin-links {
 					grid-column: 2;
 					grid-row: 1;
 					justify-self: end;
+					gap: var(--spacing-2);
+				}
+
+				.nav-admin {
 					font-size: var(--font-size-xs);
-					margin-inline-start: 0;
 					white-space: nowrap;
 				}
 

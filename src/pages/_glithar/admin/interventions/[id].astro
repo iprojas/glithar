@@ -1,0 +1,250 @@
+---
+import Base from "../../../../layouts/Base.astro";
+import { getPostForAdmin, productionForPost } from "../../../../lib/ar/drafts";
+import { requireAdminPage } from "../../../../lib/ar/http";
+import { productionStageLabels } from "../../../../lib/ar/metadata";
+import { productionStageIds } from "../../../../lib/ar/types";
+
+const denied = requireAdminPage(Astro);
+if (denied) return denied;
+
+const id = Astro.params.id;
+if (!id) return Astro.redirect("/_glithar/admin");
+
+const post = await getPostForAdmin(Astro.locals.emdash, id);
+const metadata = productionForPost(post);
+const canPublish = Boolean(post.data.optimized_model_url && post.data.thumbnail_url);
+---
+
+<Base title={`Production: ${post.data.title ?? post.slug}`} description="Manual AR production controls">
+	<section class="production-admin" data-post-id={post.id}>
+		<header class="page-head">
+			<div>
+				<p class="eyebrow">Glithar AR Studio</p>
+				<h1>{post.data.title ?? post.slug ?? post.id}</h1>
+				<p class="status">Status: <code>{post.data.production_status ?? "draft"}</code></p>
+			</div>
+			<div class="actions">
+				<a href="/_glithar/admin">Dashboard</a>
+				<a href={`/_emdash/admin/content/posts/${post.id}`}>Open in EmDash</a>
+			</div>
+		</header>
+
+		<div id="notice" class="notice" hidden></div>
+
+		<section class="summary">
+			<div><span>Slug</span><strong>{post.slug}</strong></div>
+			<div><span>Project</span><strong>{post.data.project ?? "Unset"}</strong></div>
+			<div><span>Visualizer</span><strong>{post.data.visualizer ?? "urban-spirit"}</strong></div>
+			<div><span>LoRA</span><strong>{post.data.lora_slug ?? "glithar-house"}</strong></div>
+		</section>
+
+		<section class="controls">
+			<button id="continue" type="button">Continue Next Stage</button>
+			<button id="publish" type="button" disabled={!canPublish}>Publish</button>
+			{
+				post.data.public_url && (
+					<a class="public-link" href={String(post.data.public_url)}>Public URL</a>
+				)
+			}
+		</section>
+
+		<section class="stage-list">
+			{productionStageIds.map((stage) => {
+				const record = metadata.stages.find((item) => item.stage === stage);
+				return (
+					<article class={`stage stage-${record?.status ?? "pending"}`}>
+						<div class="stage-top">
+							<div>
+								<h2>{productionStageLabels[stage]}</h2>
+								<p><code>{stage}</code> · {record?.status ?? "pending"}</p>
+							</div>
+							<button type="button" data-stage={stage}>Run</button>
+						</div>
+						{record?.error && <p class="error">{record.error}</p>}
+						{record?.logs?.length ? (
+							<ul>{record.logs.map((log) => <li>{log}</li>)}</ul>
+						) : null}
+						{record?.output ? (
+							<pre>{JSON.stringify(record.output, null, "\t")}</pre>
+						) : null}
+					</article>
+				);
+			})}
+		</section>
+	</section>
+
+	<script is:inline>
+		const postId = document.querySelector(".production-admin").dataset.postId;
+		const notice = document.getElementById("notice");
+
+		document.querySelectorAll("[data-stage]").forEach((button) => {
+			button.addEventListener("click", () => runStage(button.dataset.stage));
+		});
+		document.getElementById("continue").addEventListener("click", () => runStage(null, true));
+		document.getElementById("publish").addEventListener("click", publish);
+
+		async function runStage(stage, shouldContinue = false) {
+			setNotice("Running production stage...", false);
+			const response = await fetch("/api/ar/production/run", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ postId, stage, continue: shouldContinue }),
+			});
+			const result = await response.json();
+			if (!response.ok) return setNotice(result.error || "Stage failed", true);
+			setNotice("Stage completed. Reloading...", false);
+			location.reload();
+		}
+
+		async function publish() {
+			setNotice("Publishing intervention...", false);
+			const response = await fetch("/api/ar/production/publish", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ postId }),
+			});
+			const result = await response.json();
+			if (!response.ok) return setNotice(result.error || "Publish failed", true);
+			setNotice("Published. Reloading...", false);
+			location.reload();
+		}
+
+		function setNotice(message, isError) {
+			notice.hidden = false;
+			notice.textContent = message;
+			notice.classList.toggle("error", isError);
+		}
+	</script>
+</Base>
+
+<style>
+	.production-admin {
+		max-width: var(--wide-width);
+		margin: 0 auto;
+		padding: var(--spacing-10) var(--spacing-6) var(--spacing-16);
+	}
+	.page-head,
+	.actions,
+	.controls,
+	.stage-top,
+	.summary {
+		display: flex;
+		gap: var(--spacing-4);
+	}
+	.page-head,
+	.stage-top,
+	.summary {
+		justify-content: space-between;
+	}
+	.page-head {
+		align-items: flex-start;
+		margin-bottom: var(--spacing-8);
+	}
+	.actions,
+	.controls {
+		align-items: center;
+		flex-wrap: wrap;
+	}
+	.eyebrow {
+		color: var(--color-accent);
+		font-size: var(--font-size-xs);
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: var(--tracking-wider);
+	}
+	h1 {
+		font-size: var(--font-size-4xl);
+		letter-spacing: var(--tracking-tight);
+	}
+	code,
+	pre {
+		font-family: var(--font-mono);
+	}
+	.status,
+	.summary span,
+	.stage p {
+		color: var(--color-muted);
+	}
+	.notice,
+	.summary,
+	.controls,
+	.stage {
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius);
+		background: var(--color-surface);
+	}
+	.notice {
+		padding: var(--spacing-3);
+		margin-bottom: var(--spacing-4);
+	}
+	.notice.error,
+	.error {
+		color: #b00020;
+	}
+	.summary {
+		padding: var(--spacing-4);
+		margin-bottom: var(--spacing-4);
+	}
+	.summary div {
+		display: grid;
+		gap: var(--spacing-1);
+		min-width: 0;
+	}
+	.controls {
+		padding: var(--spacing-4);
+		margin-bottom: var(--spacing-6);
+	}
+	button,
+	.public-link {
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius);
+		padding: var(--spacing-2) var(--spacing-3);
+		background: var(--color-bg);
+		color: var(--color-text);
+		font: inherit;
+		font-weight: 600;
+		text-decoration: none;
+		cursor: pointer;
+	}
+	#continue,
+	#publish {
+		background: var(--color-accent);
+		border-color: var(--color-accent);
+		color: var(--color-on-accent);
+	}
+	button:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+	.stage-list {
+		display: grid;
+		gap: var(--spacing-4);
+	}
+	.stage {
+		padding: var(--spacing-5);
+	}
+	.stage-succeeded {
+		border-color: var(--color-accent);
+	}
+	.stage-failed {
+		border-color: #b00020;
+	}
+	.stage h2 {
+		font-size: var(--font-size-lg);
+	}
+	pre {
+		overflow-x: auto;
+		background: var(--color-bg-subtle);
+		padding: var(--spacing-3);
+		border-radius: var(--radius);
+		font-size: var(--font-size-sm);
+	}
+	@media (max-width: 760px) {
+		.page-head,
+		.summary,
+		.stage-top {
+			flex-direction: column;
+		}
+	}
+</style>

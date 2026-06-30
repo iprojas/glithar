@@ -2,13 +2,13 @@
 	"$schema": "https://emdashcms.com/seed.schema.json",
 	"version": "1",
 	"meta": {
-		"name": "Blog Starter",
-		"description": "A blog with posts and pages",
-		"author": "EmDash"
+		"name": "Glithar",
+		"description": "An EmDash-backed AR publishing platform",
+		"author": "Glithar"
 	},
 	"settings": {
-		"title": "My Blog",
-		"tagline": "Thoughts on building for the web"
+		"title": "Glithar",
+		"tagline": "AR interventions, field notes, and generated street artifacts"
 	},
 	"collections": [
 		{
@@ -181,6 +181,10 @@
 				{
 					"slug": "notes",
 					"label": "Notes"
+				},
+				{
+					"slug": "interventions",
+					"label": "Interventions"
 				}
 			]
 		},
@@ -206,6 +210,14 @@
 				{
 					"slug": "creativity",
 					"label": "Creativity"
+				},
+				{
+					"slug": "ar",
+					"label": "AR"
+				},
+				{
+					"slug": "public-art",
+					"label": "Public Art"
 				}
 			]
 		}
@@ -1005,6 +1017,60 @@
 				"taxonomies": {
 					"category": ["notes"],
 					"tag": ["opinion"]
+				}
+			},
+			{
+				"id": "intervention-drain-oracle-003",
+				"slug": "drain-oracle-003",
+				"status": "published",
+				"data": {
+					"title": "Drain Oracle 003",
+					"excerpt": "A small oracle appears where runoff disappears.",
+					"content": [
+						{
+							"_type": "block",
+							"style": "normal",
+							"children": [
+								{
+									"_type": "span",
+									"text": "A small oracle appears where runoff disappears. The fixture asset uses the same public path shape as generated interventions.",
+									"_key": "k1"
+								}
+							],
+							"_key": "k0"
+						}
+					],
+					"project": "street-prophecies",
+					"location_type": "storm drain",
+					"concept": "A small oracle appears where runoff disappears.",
+					"ar_object": "weathered chrome mask",
+					"interaction": "The object rotates slowly until the viewer taps, then reveals a second damaged surface.",
+					"visual_style": "municipal relic with sharp silhouette and restrained glitch erosion",
+					"social_caption": "Ask the drain what the street remembers.",
+					"image_prompt": "A weathered chrome oracle mask hovering over a storm drain, built as an AR graffiti object.",
+					"image_url": "/assets/interventions/drain-oracle-003/image.png",
+					"raw_model_url": "/assets/interventions/drain-oracle-003/model.raw.glb",
+					"optimized_model_url": "/assets/interventions/drain-oracle-003/model.optimized.glb",
+					"thumbnail_url": "/assets/interventions/drain-oracle-003/thumbnail.jpg",
+					"public_url": "",
+					"visualizer": "urban-spirit",
+					"production_status": "published",
+					"production_metadata_url": "/assets/interventions/drain-oracle-003/production.json",
+					"production_summary": {
+						"version": "1",
+						"slug": "drain-oracle-003",
+						"current_status": "published",
+						"r2_mirror_key": "interventions/drain-oracle-003/production.json",
+						"updated_at": "2026-06-30T00:00:00.000Z",
+						"stages": [],
+						"history": []
+					},
+					"production_history": [],
+					"lora_slug": "glithar-house"
+				},
+				"taxonomies": {
+					"category": ["interventions"],
+					"tag": ["ar", "public-art"]
 				}
 			},
 			{

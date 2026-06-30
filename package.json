@@ -9,6 +9,10 @@
   "scripts": {
     "dev": "emdash dev",
     "schema:local": "emdash seed seed/seed.json --database data.db --on-conflict update --no-content",
+    "ar:sync:export": "bun scripts/sync-interventions.ts export",
+    "ar:sync:import": "bun scripts/sync-interventions.ts import",
+    "ar:sync:typecheck": "tsc --ignoreConfig --noEmit --allowImportingTsExtensions --moduleResolution bundler --module preserve --target ES2022 --types node scripts/sync-interventions.ts scripts/validate-content-sync.ts src/lib/ar/content-sync.ts",
+    "ar:sync:validate": "bun run ar:sync:typecheck && bun scripts/validate-content-sync.ts && bun scripts/sync-interventions.ts validate",
     "build": "bun run schema:local && EMDASH_DATABASE_URL=file:./data.db astro build",
     "preview": "astro preview",
     "deploy": "wrangler deploy",
@@ -21,6 +25,7 @@
     "@emdash-cms/plugin-forms": "^0.2.4",
     "astro": "^7.0.0",
     "emdash": "^0.24.1",
+    "qrcode": "^1.5.4",
     "react": "19.2.4",
     "react-dom": "19.2.4"
   },

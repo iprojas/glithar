@@ -1,0 +1,430 @@
+---
+import Base from "../../../layouts/Base.astro";
+import { requireAdminPage } from "../../../lib/ar/http";
+import { listArtistPrompts, listProjectPrompts } from "../../../lib/ar/prompts";
+
+const denied = requireAdminPage(Astro);
+if (denied) return denied;
+
+const artists = listArtistPrompts();
+const projects = listProjectPrompts();
+---
+
+<Base title="Idea Generator" description="Generate and import intervention ideas">
+	<section class="idea-admin">
+		<header class="page-head">
+			<div>
+				<p class="eyebrow">Glithar AR Studio</p>
+				<h1>Idea Generator</h1>
+			</div>
+			<a href="/_glithar/admin">Dashboard</a>
+		</header>
+
+		<form id="generator" class="generator">
+			<label>
+				Artist prompt
+				<select name="artist">
+					{artists.map((prompt) => <option value={prompt.id}>{prompt.label}</option>)}
+				</select>
+			</label>
+			<label>
+				Project prompt
+				<select name="project">
+					{projects.map((prompt) => <option value={prompt.id}>{prompt.label}</option>)}
+				</select>
+			</label>
+			<label>
+				Ideas
+				<input name="count" type="number" min="1" max="12" value="4" />
+			</label>
+			<label>
+				Provider
+				<select name="provider">
+					<option value="fixture">Fixture</option>
+					<option value="openai">OpenAI</option>
+					<option value="gemini">Gemini</option>
+				</select>
+			</label>
+			<label>
+				Model
+				<input name="model" type="text" placeholder="fixture-v1" />
+			</label>
+			<label class="check">
+				<input name="highReasoning" type="checkbox" />
+				High reasoning
+			</label>
+			<label class="check">
+				<input name="highQuality" type="checkbox" />
+				High quality
+			</label>
+			<button type="submit">Generate</button>
+		</form>
+
+		<div id="notice" class="notice" hidden></div>
+
+		<div class="toolbar">
+			<button id="regenerate" type="button">Regenerate Selected</button>
+			<button id="delete" type="button">Delete Selected</button>
+			<button id="export" type="button">Export CSV</button>
+			<label class="import">
+				Import CSV
+				<input id="csv" type="file" accept=".csv,text/csv" />
+			</label>
+			<button id="import-drafts" type="button">Import Selected Drafts</button>
+		</div>
+
+		<div class="table-wrap">
+			<table>
+				<thead>
+					<tr>
+						<th><input id="select-all" type="checkbox" aria-label="Select all" /></th>
+						<th>title</th>
+						<th>location_type</th>
+						<th>concept</th>
+						<th>ar_object</th>
+						<th>interaction</th>
+						<th>visual_style</th>
+						<th>social_caption</th>
+					</tr>
+				</thead>
+				<tbody id="ideas-body">
+					<tr><td colspan="8" class="empty">Generate or import ideas.</td></tr>
+				</tbody>
+			</table>
+		</div>
+	</section>
+
+	<script is:inline type="application/json" id="project-data" set:html={JSON.stringify(projects)} />
+	<script is:inline>
+		const fields = [
+			"title",
+			"location_type",
+			"concept",
+			"ar_object",
+			"interaction",
+			"visual_style",
+			"social_caption",
+		];
+		const projects = JSON.parse(document.getElementById("project-data").textContent);
+		let rows = [];
+		const body = document.getElementById("ideas-body");
+		const notice = document.getElementById("notice");
+		const form = document.getElementById("generator");
+
+		form.addEventListener("submit", async (event) => {
+			event.preventDefault();
+			const payload = formPayload();
+			setNotice("Generating ideas...", false);
+			const response = await fetch("/api/ar/ideas/generate", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(payload),
+			});
+			const result = await response.json();
+			if (!response.ok) return setNotice(result.error || "Generation failed", true);
+			rows = result.ideas;
+			render();
+			setNotice(result.warnings?.[0] || `Generated ${rows.length} idea rows.`, false);
+		});
+
+		document.getElementById("select-all").addEventListener("change", (event) => {
+			body.querySelectorAll("input[type=checkbox]").forEach((box) => {
+				box.checked = event.target.checked;
+			});
+		});
+
+		document.getElementById("delete").addEventListener("click", () => {
+			const selected = selectedIds();
+			rows = rows.filter((row) => !selected.includes(row.id));
+			render();
+		});
+
+		document.getElementById("regenerate").addEventListener("click", async () => {
+			const selected = rows.filter((row) => selectedIds().includes(row.id));
+			if (selected.length === 0) return setNotice("Select rows to regenerate.", true);
+			if (selected.some((row) => row.manuallyEdited) && !confirm("Regenerate manually edited rows?")) {
+				return;
+			}
+			const payload = { ...formPayload(), count: selected.length, regenerateRows: selected };
+			const response = await fetch("/api/ar/ideas/generate", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(payload),
+			});
+			const result = await response.json();
+			if (!response.ok) return setNotice(result.error || "Regeneration failed", true);
+			let index = 0;
+			rows = rows.map((row) => selected.some((item) => item.id === row.id) ? result.ideas[index++] : row);
+			render();
+			setNotice(`Regenerated ${result.ideas.length} row(s).`, false);
+		});
+
+		document.getElementById("export").addEventListener("click", () => {
+			const csv = toCsv(rows);
+			const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+			const link = document.createElement("a");
+			link.href = url;
+			link.download = "glithar-ideas.csv";
+			link.click();
+			URL.revokeObjectURL(url);
+		});
+
+		document.getElementById("csv").addEventListener("change", async (event) => {
+			const file = event.target.files?.[0];
+			if (!file) return;
+			rows = parseCsv(await file.text());
+			render();
+			setNotice(`Imported ${rows.length} CSV row(s).`, false);
+		});
+
+		document.getElementById("import-drafts").addEventListener("click", async () => {
+			const selected = rows.filter((row) => selectedIds().includes(row.id));
+			if (selected.length === 0) return setNotice("Select idea rows to import.", true);
+			const response = await fetch("/api/ar/drafts/import", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ ideas: selected }),
+			});
+			const result = await response.json();
+			if (!response.ok) return setNotice(result.error || "Import failed", true);
+			setNotice(
+				`Imported ${result.imported.length} draft(s): ` +
+					result.imported.map((item) => `<a href="${item.admin_url}">${item.slug}</a>`).join(", "),
+				false,
+				true,
+			);
+		});
+
+		function formPayload() {
+			const data = new FormData(form);
+			return {
+				artist: data.get("artist"),
+				project: data.get("project"),
+				count: Number(data.get("count")),
+				provider: data.get("provider"),
+				model: data.get("model"),
+				highReasoning: data.has("highReasoning"),
+				highQuality: data.has("highQuality"),
+			};
+		}
+
+		function render() {
+			if (rows.length === 0) {
+				body.innerHTML = `<tr><td colspan="8" class="empty">Generate or import ideas.</td></tr>`;
+				return;
+			}
+			body.innerHTML = rows.map((row) => `
+				<tr data-id="${escapeHtml(row.id)}">
+					<td><input type="checkbox" aria-label="Select row" /></td>
+					${fields.map((field) => `<td><textarea data-field="${field}">${escapeHtml(row[field] || "")}</textarea></td>`).join("")}
+				</tr>
+			`).join("");
+			body.querySelectorAll("textarea").forEach((input) => {
+				input.addEventListener("input", (event) => {
+					const tr = event.target.closest("tr");
+					const row = rows.find((item) => item.id === tr.dataset.id);
+					row[event.target.dataset.field] = event.target.value;
+					row.manuallyEdited = true;
+				});
+			});
+		}
+
+		function selectedIds() {
+			return [...body.querySelectorAll("tr")]
+				.filter((row) => row.querySelector("input[type=checkbox]")?.checked)
+				.map((row) => row.dataset.id);
+		}
+
+		function toCsv(items) {
+			const columns = [...fields, "project", "category", "visualizer", "lora_slug", "source_artist", "source_project"];
+			return [columns.join(","), ...items.map((row) => columns.map((column) => csvCell(row[column] || "")).join(","))].join("\n");
+		}
+
+		function parseCsv(text) {
+			const [headerLine, ...lines] = text.trim().split(/\r?\n/);
+			const headers = splitCsvLine(headerLine);
+			const project = projects.find((item) => item.id === formPayload().project) || projects[0];
+			return lines.filter(Boolean).map((line) => {
+				const values = splitCsvLine(line);
+				const row = {
+					id: crypto.randomUUID(),
+					project: project.project,
+					category: project.category,
+					visualizer: project.visualizer,
+					lora_slug: project.lora_slug,
+					source_artist: formPayload().artist,
+					source_project: formPayload().project,
+					manuallyEdited: true,
+				};
+				headers.forEach((header, index) => row[header] = values[index] || "");
+				return row;
+			});
+		}
+
+		function splitCsvLine(line) {
+			const result = [];
+			let cell = "";
+			let quoted = false;
+			for (let index = 0; index < line.length; index++) {
+				const char = line[index];
+				if (char === '"' && line[index + 1] === '"') {
+					cell += '"';
+					index++;
+				} else if (char === '"') {
+					quoted = !quoted;
+				} else if (char === "," && !quoted) {
+					result.push(cell);
+					cell = "";
+				} else {
+					cell += char;
+				}
+			}
+			result.push(cell);
+			return result;
+		}
+
+		function csvCell(value) {
+			const text = String(value);
+			return /[",\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+		}
+
+		function setNotice(message, isError, html = false) {
+			notice.hidden = false;
+			notice.classList.toggle("error", isError);
+			if (html) notice.innerHTML = message;
+			else notice.textContent = message;
+		}
+
+		function escapeHtml(value) {
+			return String(value)
+				.replaceAll("&", "&amp;")
+				.replaceAll("<", "&lt;")
+				.replaceAll(">", "&gt;")
+				.replaceAll('"', "&quot;");
+		}
+	</script>
+</Base>
+
+<style>
+	.idea-admin {
+		max-width: var(--wide-width);
+		margin: 0 auto;
+		padding: var(--spacing-10) var(--spacing-6) var(--spacing-16);
+	}
+	.page-head,
+	.generator,
+	.toolbar {
+		display: flex;
+		gap: var(--spacing-4);
+		align-items: end;
+		flex-wrap: wrap;
+	}
+	.page-head {
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: var(--spacing-8);
+	}
+	.eyebrow {
+		color: var(--color-accent);
+		font-size: var(--font-size-xs);
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: var(--tracking-wider);
+	}
+	h1 {
+		font-size: var(--font-size-4xl);
+		letter-spacing: var(--tracking-tight);
+	}
+	label {
+		display: grid;
+		gap: var(--spacing-1);
+		font-size: var(--font-size-sm);
+		color: var(--color-muted);
+	}
+	.check,
+	.import {
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-2);
+	}
+	input,
+	select,
+	button,
+	.import {
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius);
+		padding: var(--spacing-2) var(--spacing-3);
+		background: var(--color-bg);
+		color: var(--color-text);
+		font: inherit;
+	}
+	button,
+	.import {
+		cursor: pointer;
+		font-weight: 600;
+	}
+	form button,
+	#import-drafts {
+		background: var(--color-accent);
+		border-color: var(--color-accent);
+		color: var(--color-on-accent);
+	}
+	.import input {
+		display: none;
+	}
+	.notice {
+		margin: var(--spacing-5) 0;
+		padding: var(--spacing-3);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius);
+	}
+	.notice.error {
+		border-color: #b00020;
+		color: #b00020;
+	}
+	.toolbar {
+		margin: var(--spacing-6) 0 var(--spacing-3);
+	}
+	.table-wrap {
+		overflow-x: auto;
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius);
+	}
+	table {
+		width: 100%;
+		border-collapse: collapse;
+		min-width: 1180px;
+	}
+	th,
+	td {
+		border-bottom: 1px solid var(--color-border-subtle);
+		padding: var(--spacing-2);
+		text-align: left;
+		vertical-align: top;
+	}
+	th {
+		font-family: var(--font-mono);
+		font-size: var(--font-size-xs);
+		color: var(--color-muted);
+	}
+	textarea {
+		width: 100%;
+		min-height: 5rem;
+		resize: vertical;
+		border: 1px solid transparent;
+		border-radius: var(--radius);
+		background: var(--color-bg-subtle);
+		color: var(--color-text);
+		padding: var(--spacing-2);
+		font: inherit;
+	}
+	textarea:focus {
+		outline: none;
+		border-color: var(--color-accent);
+	}
+	.empty {
+		color: var(--color-muted);
+		text-align: center;
+		padding: var(--spacing-8);
+	}
+</style>

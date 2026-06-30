@@ -1,0 +1,11 @@
+{
+	"project": "street-prophecies",
+	"category": "interventions",
+	"visualizer": "urban-spirit",
+	"lora_slug": "glithar-house",
+	"constraints": [
+		"Keep the AR object readable from a phone at sidewalk distance.",
+		"Use one primary object and one interaction.",
+		"Avoid brand references, private property instructions, and unsafe placement."
+	]
+}
