@@ -40,6 +40,103 @@
 					"slug": "excerpt",
 					"label": "Excerpt",
 					"type": "text"
+				},
+				{
+					"slug": "project",
+					"label": "Project",
+					"type": "string"
+				},
+				{
+					"slug": "location_type",
+					"label": "Location Type",
+					"type": "string"
+				},
+				{
+					"slug": "concept",
+					"label": "Concept",
+					"type": "text",
+					"searchable": true
+				},
+				{
+					"slug": "ar_object",
+					"label": "AR Object",
+					"type": "string"
+				},
+				{
+					"slug": "interaction",
+					"label": "Interaction",
+					"type": "text"
+				},
+				{
+					"slug": "visual_style",
+					"label": "Visual Style",
+					"type": "text"
+				},
+				{
+					"slug": "social_caption",
+					"label": "Social Caption",
+					"type": "text",
+					"searchable": true
+				},
+				{
+					"slug": "image_prompt",
+					"label": "Image Prompt",
+					"type": "text"
+				},
+				{
+					"slug": "image_url",
+					"label": "Generated Image URL",
+					"type": "string"
+				},
+				{
+					"slug": "raw_model_url",
+					"label": "Raw Model URL",
+					"type": "string"
+				},
+				{
+					"slug": "optimized_model_url",
+					"label": "Optimized Model URL",
+					"type": "string"
+				},
+				{
+					"slug": "thumbnail_url",
+					"label": "Thumbnail URL",
+					"type": "string"
+				},
+				{
+					"slug": "public_url",
+					"label": "Public URL",
+					"type": "string"
+				},
+				{
+					"slug": "visualizer",
+					"label": "Visualizer",
+					"type": "string"
+				},
+				{
+					"slug": "production_status",
+					"label": "Production Status",
+					"type": "string"
+				},
+				{
+					"slug": "production_metadata_url",
+					"label": "Production Metadata URL",
+					"type": "string"
+				},
+				{
+					"slug": "production_summary",
+					"label": "Production Summary",
+					"type": "json"
+				},
+				{
+					"slug": "production_history",
+					"label": "Production History",
+					"type": "json"
+				},
+				{
+					"slug": "lora_slug",
+					"label": "LoRA Slug",
+					"type": "string"
 				}
 			]
 		},
